@@ -104,7 +104,7 @@ body.galeria-abierta{overflow:hidden}
 .encuesta--gracias .encuesta__ok{display:block}
 .testi-carrusel{position:relative;margin-top:2.8rem}
 .testi-lista{display:flex;overflow:hidden;touch-action:pan-y}
-.testi-track{display:flex;width:100%;transition:transform .6s cubic-bezier(.22,.61,.36,1);will-change:transform}
+.testi-track{display:flex;width:100%;visibility:hidden;transition:transform .6s cubic-bezier(.22,.61,.36,1);will-change:transform}
 .testi-slide{flex:0 0 100%;min-width:0;width:100%;padding:.4rem .4rem 1.4rem;box-sizing:border-box}
 .testi-tarjeta{height:100%;min-width:0;display:flex;flex-direction:column;gap:1rem;padding:clamp(1.5rem,3vw,2.3rem);border-radius:14px;background:var(--fondo-tarjeta);color:var(--verde);box-shadow:none}
 .testi-tarjeta__estrellas{color:var(--dorado);font-size:1.1rem;letter-spacing:.12em}
@@ -152,8 +152,22 @@ const crearTestimonio=({nombre,como,testimonio})=>{
   const rol=document.createElement("span");
   rol.className="testi-tarjeta__rol";
   rol.textContent=String(como||"Cliente").trim();
-  pie.append(autor,rol);
+  pie.append(autor,document.createTextNode(" "),rol);
   tarjeta.append(estrellas,cita,pie);
+  slide.append(tarjeta);
+  return slide;
+};
+
+const crearEstadoTestimonios=mensaje=>{
+  const slide=document.createElement("div");
+  slide.className="testi-slide";
+  slide.dataset.testiSlide="";
+  const tarjeta=document.createElement("blockquote");
+  tarjeta.className="testi-tarjeta";
+  const texto=document.createElement("p");
+  texto.className="testi-tarjeta__quote";
+  texto.textContent=mensaje;
+  tarjeta.append(texto);
   slide.append(tarjeta);
   return slide;
 };
@@ -189,8 +203,10 @@ const iniciarCarruselTestimonios=()=>{
 };
 
 window.__sanherTestimonios=data=>{
-  if(data?.ok&&Array.isArray(data.data)&&data.data.length&&track){
-    track.replaceChildren(...data.data.map(crearTestimonio));
+  if(data?.ok&&Array.isArray(data.data)&&track){
+    track.replaceChildren(...(data.data.length
+      ? data.data.map(crearTestimonio)
+      : [crearEstadoTestimonios("Próximamente publicaremos testimonios de nuestros clientes.")]));
   }
   iniciarCarruselTestimonios();
   delete window.__sanherTestimonios;
@@ -198,10 +214,16 @@ window.__sanherTestimonios=data=>{
 
 iniciarCarruselTestimonios();
 if(track){
+  track.replaceChildren(crearEstadoTestimonios("Cargando testimonios…"));
+  track.style.visibility="visible";
   const fuente=document.createElement("script");
   fuente.src=`${TESTIMONIOS_URL}?accion=aprobados&callback=__sanherTestimonios&_=${Date.now()}`;
   fuente.async=true;
-  fuente.onerror=()=>delete window.__sanherTestimonios;
+  fuente.onerror=()=>{
+    track.replaceChildren(crearEstadoTestimonios("No fue posible cargar los testimonios en este momento."));
+    iniciarCarruselTestimonios();
+    delete window.__sanherTestimonios;
+  };
   document.head.append(fuente);
 }
 </script> <script>
